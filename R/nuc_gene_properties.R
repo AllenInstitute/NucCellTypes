@@ -1,5 +1,8 @@
 # Load libraries
 library(plyr)
+library(feather)
+library(ggplot2)
+library(ggrepel)
 
 #### Calc nuclear fraction by type - Top 3 genes ####
 load("//allen/programs/celltypes/workgroups/hct/CT_clustering/mouse_cell_vs_nuc/scriptsAndOutputJAM/outputFiles_new/info.RData", verbose = TRUE)
@@ -46,7 +49,7 @@ for (i in 1:nrow(nuc.ratio.df)) {
 
 order.by.nucfrac <- order(rowMeans(nuc.ratio.df[, c("expr_ratio", "intron_ratio")]))
 nuc.ratio.df <- nuc.ratio.df[order.by.nucfrac, ]
-write.csv(nuc.ratio.df, file = "analysis/nuc_vs_cell/nuc.ratio.estimate.csv",
+write.csv(nuc.ratio.df, file = "output/nuc.ratio.estimate.csv",
           row.names = FALSE)
 
 
@@ -72,7 +75,7 @@ g.nucfrac <- ggplot(nuc.ratio.df, aes(x = expr_ratio, y = intron_ratio, label = 
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 plot(g.nucfrac)
-ggsave(g.nucfrac, filename = "analysis/nuc_vs_cell/nuc_frac_by_type.pdf", 
+ggsave(g.nucfrac, filename = "output/nuc_frac_by_type.pdf", 
        width = 3, height = 3)
 
 cor(nuc.ratio.df$intron_ratio, nuc.ratio.df$expr_ratio)
@@ -124,9 +127,8 @@ for (gene1 in nuc.plot.genes) {
           legend.title = element_blank(),
           axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
   plot(g.expr.box)
-  ggsave(g.expr.box, filename = paste0("analysis/nuc_vs_cell/", 
-                                       gene1, "_expr_by_type.pdf"), 
-         width = 4, height = 3)
+  g.expr.box.fn <- paste0("output/", gene1, "_expr_by_type.pdf")
+  ggsave(g.expr.box, filename = g.expr.box.fn, width = 4, height = 3)
 }
 
 
@@ -148,7 +150,7 @@ g.intron.box <- ggplot(anno.all, aes(x = cell_type,
         legend.title = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 plot(g.intron.box)
-ggsave(g.intron.box, filename = "analysis/nuc_vs_cell/intron_reads_by_type.pdf", 
+ggsave(g.intron.box, filename = "output/intron_reads_by_type.pdf", 
        width = 4, height = 3)
 
 
@@ -162,13 +164,13 @@ ggsave(g.intron.box, filename = "analysis/nuc_vs_cell/intron_reads_by_type.pdf",
 
 
 #### Nuc fraction individual genes - properties ####
-nuc.frac <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/nuclearFraction_byCellType.csv", row.names = 1)
+nuc.frac <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/archived/nuclearFraction_byCellType.csv", row.names = 1)
 nuc.frac$ScaledAverage[which(apply(nuc.frac[, 1:11], 1, function(x) all(is.na(x))))] <- NA
 colnames(nuc.frac) <- sub("ScaledAverage", "nucfrac", colnames(nuc.frac))
 
-nuc.marker <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/nuc.marker.scores.csv")
-cell.marker <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/cell.marker.scores.csv")
-gene.info <- read.csv("//allen/programs/celltypes/workgroups/humancelltypes/Analyses/CellTypes/Cell_vs_Nuc/Cell_vs_Nuc_manuscript/lib/Mus_musculus.gene_info.csv", na.strings = "-")
+nuc.marker <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/archived/nuc.marker.scores.csv")
+cell.marker <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/archived/cell.marker.scores.csv")
+gene.info <- read.csv("//allen/programs/celltypes/workgroups/humancelltypes/Analyses/CellTypes/Cell_vs_Nuc/manuscript/lib/Mus_musculus.gene_info.csv", na.strings = "-")
 
 all.gene.info <- merge(nuc.marker, cell.marker, by = "gene", suffixes = c("_nuc", "_cell"))
 all.gene.info <- merge(all.gene.info, nuc.frac, by.x = "gene", by.y = "row.names")
@@ -206,8 +208,10 @@ write.csv(all.gene.info.tosave, file = "C:/Users/trygveb/Dropbox/AIBS/Transcript
 
 
 # Process gene info
-all.gene.info$nucfrac.bin <- cut(all.gene.info$nucfrac, seq(0, 1, 0.1), include.lowest = TRUE)
-levels(all.gene.info$nucfrac.bin) <- paste0(seq(0, 0.9, 0.1), "-", seq(0.1, 1, 0.1))
+nucprop.bins <- seq(0, 1, 0.1)
+all.gene.info$nucfrac.bin <- cut(all.gene.info$nucfrac, nucprop.bins, include.lowest = TRUE)
+levels(all.gene.info$nucfrac.bin) <- paste0(nucprop.bins[-length(nucprop.bins)], 
+                                            "-", nucprop.bins[-1])
 all.gene.info.subset <- subset(all.gene.info, nucfrac <= 1 &
                                  ((total.clusters_nuc > 0 & fpkm.max_nuc > 1) | 
                                     (total.clusters_cell > 0 & fpkm.max_cell > 1)))
@@ -226,11 +230,12 @@ paste(subset(all.gene.info.subset, beta.prop1_cell > 0.4 & nucfrac < 0.05 & fpkm
 
 gene.types <- c("Non-coding", "Protein-coding", "Pseudogene")
 g.nucfrac.hist <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
-                         aes(x = nucfrac)) +
-  facet_wrap(~ type_of_gene, scale = "free_y") +
-  geom_histogram(color = "black", fill = "grey", lwd = 0.1) +
+                         aes(x = nucfrac, fill = type_of_gene)) +
+  facet_wrap(~ type_of_gene, scale = "free_y", ncol = 1) +
+  geom_histogram(color = "black", lwd = 0.1, show.legend = FALSE) +
   scale_x_continuous(breaks = seq(0, 1, 0.2)) +
-  xlab("Estimated nuclear proportion of transcripts") +
+  scale_fill_brewer(palette = "Dark2") +
+  xlab("Nuclear proportion") +
   ylab("Number of genes") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
@@ -239,18 +244,19 @@ g.nucfrac.hist <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.typ
         strip.text.x = element_text(size = 12), 
         panel.border = element_rect(colour = "black"))
 plot(g.nucfrac.hist)
-ggsave(g.nucfrac.hist, filename = "analysis/nuc_vs_cell/nucfrac_hist_by_genetype.pdf", 
-       width = 6, height = 2)
+ggsave(g.nucfrac.hist, filename = "output/nucfrac_hist_by_genetype5.pdf", 
+       width = 2.5, height = 5)
 
 
 
-# Cytoplasm enriched genes are less specifically expressed (majority are in all clusters)
-g.marker.box <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
-                       aes(x = nucfrac.bin, y = beta.prop1_cell)) +
-  facet_wrap(~ type_of_gene) +
-  geom_boxplot(fill = "grey", outlier.color = "grey90",
-               outlier.size = 0.2, lwd = 0.1, fatten = 8) +
-  xlab("Estimated nuclear proportion of transcripts") +
+# Non-coding/pseudogenes better markers
+g.marker.bygene <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
+                          aes(x = type_of_gene, y = beta.prop1_cell, fill = type_of_gene)) +
+  geom_violin(lwd = 0.1, show.legend = FALSE) +
+  geom_boxplot(width = 0.0001, outlier.shape = NA, coef = 0, show.legend = FALSE) +
+  stat_summary(fun.y=median, geom="point", size=1, show.legend = FALSE) +
+  scale_fill_brewer(palette = "Dark2") +
+  xlab("") +
   ylab("Marker score") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
@@ -259,30 +265,75 @@ g.marker.box <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types
         strip.text.x = element_text(size = 12), 
         panel.border = element_rect(colour = "black"),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-plot(g.marker.box)
-ggsave(g.marker.box, filename = "analysis/nuc_vs_cell/marker_score_boxplot_by_genetype.pdf", 
-       width = 6, height = 3)
+plot(g.marker.bygene)
+ggsave(g.marker.bygene, filename = "output/marker_score_vs_genetype3.pdf", 
+       width = 2, height = 2.5)
+
+
+
+# Cytoplasm enriched genes are less specifically expressed (majority are in all clusters)
+mean.score <- median(subset(all.gene.info.subset, type_of_gene %in% gene.types)$beta.prop1_cell)
+g.marker.bynucprop <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
+                       aes(x = nucfrac.bin, y = beta.prop1_cell)) +
+  # facet_wrap(~ type_of_gene) +
+  geom_boxplot(fill = "grey", outlier.color = "grey90",
+               outlier.size = 0.2, lwd = 0.1, fatten = 8) +
+  geom_hline(yintercept = mean.score, col = "light blue") +
+  xlab("Nuclear proportion") +
+  ylab("Marker score") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_text(size = 12), 
+        panel.border = element_rect(colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+plot(g.marker.bynucprop)
+ggsave(g.marker.bynucprop, filename = "output/marker_score_by_nucprop5.pdf", 
+       width = 2.5, height = 2.5)
+
+
+# g.marker.bynucprop <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
+#                              aes(x = nucfrac.bin, y = beta.prop1_cell)) +
+#   geom_boxplot(fill = "grey", outlier.color = "grey90",
+#                outlier.size = 0.2, lwd = 0.1, fatten = 8) +
+#   stat_summary(fun.y=median, geom="line", size=1, show.legend = FALSE) +
+#   theme_bw()
+# plot(g.marker.bynucprop)
+
+
 
 # ANOVA
 for (type1 in gene.types) {
   aov1 <- aov(beta.prop1_cell ~ nucfrac.bin, 
               data = subset(all.gene.info.subset, type_of_gene == type1))
   pw.diff1 <- TukeyHSD(aov1)
+  print(type1)
   print(summary(aov1))
   print(pw.diff1[[1]][pw.diff1[[1]][, 4] < 0.05 / 3, ])
 }
 
+# All genes
+kt1 <- kruskal.test(beta.prop1_cell ~ nucfrac.bin, 
+            data = subset(all.gene.info.subset, type_of_gene %in% gene.types))
+print(summary(kt1))
+pw.wt1 <- pairwise.wilcox.test(subset(all.gene.info.subset, type_of_gene %in% gene.types)$beta.prop1_cell,
+                                 subset(all.gene.info.subset, type_of_gene %in% gene.types)$nucfrac.bin, 
+                                 p.adjust.method = "BH")
+
+
+
 
 # Save pseudogenes
 write.csv(subset(all.gene.info.subset, nucfrac < 0.05 & type_of_gene == "Pseudogene")$gene, 
-          "analysis/nuc_vs_cell/psegenes.csv")  # Cyto
+          "output/psegenes.csv")  # Cyto
 write.csv(subset(all.gene.info.subset, nucfrac > 0.5 & type_of_gene == "Pseudogene")$gene, 
           "analysis/genes.csv")  # Nuclear
 
 
 
 #### Compare nuclear proportion to literature (Halpern et al. 2015) ####
-nucprop.halpern <- read.csv("//allen/programs/celltypes/workgroups/humancelltypes/Analyses/CellTypes/Cell_vs_Nuc/Cell_vs_Nuc_manuscript/lib/Halpern2015-nuc_cyto_localization/Halpern2015_TableS2_Nuc_Cyto_gene_counts.csv")
+nucprop.halpern <- read.csv("//allen/programs/celltypes/workgroups/humancelltypes/Analyses/CellTypes/Cell_vs_Nuc/manuscript/lib/Halpern2015-nuc_cyto_localization/Halpern2015_TableS2_Nuc_Cyto_gene_counts.csv")
 
 tissue.samps <- c("MIN6.1", "MIN6.2", "liver.1", "liver.2")
 for (tissue1 in tissue.samps) {
@@ -326,7 +377,7 @@ g.nucprop.compare <- ggplot(all.gene.info.subset2,
   theme_bw()
 plot(g.nucprop.compare)
 ggsave(g.nucprop.compare, width = 4, height = 4,
-       filename = "analysis/nuc_vs_cell/nucprop_compare_halpern2015.pdf")
+       filename = "output/nucprop_compare_halpern2015.pdf")
 
 
 # Plot comparison of nuc proportions - hist
@@ -348,7 +399,7 @@ g.nucprop.hist.compare <- ggplot(all.gene.info.subset2l,
         panel.grid.minor = element_blank())
 plot(g.nucprop.hist.compare)
 ggsave(g.nucprop.hist.compare, width = 5, height = 2,
-       filename = "analysis/nuc_vs_cell/nucprop_compare_hist_halpern2015.pdf")
+       filename = "output/nucprop_compare_hist_halpern2015.pdf")
 
 
 
