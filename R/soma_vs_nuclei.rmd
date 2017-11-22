@@ -1,0 +1,157 @@
+---
+title: "Soma vs Nuclei Size"
+output: html_document
+author: Thuc Nguyen
+date: 11/13/2017
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Size of nuclei and soma 
+
+We aim to measure the size of soma and nuclei for cells in different layers of the mouse visual cortex. Cells labeled by layer-enriched Cre lines crossed to Ai14 are imaged on confocal microscope. Maximum intensity projection of 5-um optical z-stacks (at 1-um intervals) from confocal images are analyzed on CellProfiler to segment soma and their associated nuclei.
+
+## Rbp4-Cre;Ai14 
+
+Load CellProfiler data.
+```{r Rbp4 loads, echo=FALSE}
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/")
+
+nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
+
+#remove any nucleus that shares a parent with another nucleus
+#Parent_Soma in nuclei_dat corresponds to ObjectID for soma in soma_dat
+dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
+nuclei_dat <- nuclei_dat[!dup_index, ]
+
+#rename and select variables for nuclei
+nuclei_dat <- nuclei_dat %>%
+  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
+  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
+
+#rename and select variables for soma
+soma_dat <- soma_dat %>%
+  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
+  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
+
+#combine tables for nuclei and soma
+dat_rbp4 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
+
+dat_rbp4 <- dat_rbp4 %>%
+  mutate(nuc_soma_ratio = n_area/s_area)
+
+mean(dat_rbp4$nuc_soma_ratio)
+```
+
+## Nr5a1-Cre;Ai14 
+
+Load CellProfiler data.
+```{r Nr5a1, echo=FALSE}
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Nr5a1/")
+
+nuclei_dat_1 <- read.csv("stacks_40-45/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_1 <- read.csv("stacks_40-45/Soma.csv",as.is=T,header=T)
+
+nuclei_dat_2 <- read.csv("stacks_50-55/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_2 <- read.csv("stacks_50-55/Soma.csv",as.is=T,header=T)
+
+nuclei_dat_2$Parent_Soma <- nuclei_dat_2$Parent_Soma + 1000
+soma_dat_2$ObjectNumber <- soma_dat_2$ObjectNumber + 1000
+
+nuclei_dat_3 <- read.csv("stacks_60-65/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_3 <- read.csv("stacks_60-65/Soma.csv",as.is=T,header=T)
+
+nuclei_dat_3$Parent_Soma <- nuclei_dat_3$Parent_Soma + 2000
+soma_dat_3$ObjectNumber <- soma_dat_3$ObjectNumber + 2000
+
+nuclei_dat <- rbind(nuclei_dat_1, nuclei_dat_2, nuclei_dat_3)
+soma_dat <- rbind(soma_dat_1, soma_dat_2, soma_dat_3)
+
+#remove any nucleus that shares a parent with another nucleus
+dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
+nuclei_dat <- nuclei_dat[!dup_index, ]
+
+#rename and select variables for nuclei
+nuclei_dat <- nuclei_dat %>%
+  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
+  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
+
+#rename and select variables for soma
+soma_dat <- soma_dat %>%
+  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
+  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
+
+#combine tables for nuclei and soma
+dat_nr5a1 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
+
+dat_nr5a1 <- dat_nr5a1 %>%
+  mutate(nuc_soma_ratio = n_area/s_area)
+```
+
+
+## Scnn1a-Tg3-Cre;Ai14 
+
+Load CellProfiler data.
+```{r Scnn1a, echo=FALSE}
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Scnn1a-Tg3/current/")
+
+nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
+
+#remove any nucleus that shares a parent with another nucleus
+dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
+nuclei_dat <- nuclei_dat[!dup_index, ]
+
+#rename and select variables for nuclei
+nuclei_dat <- nuclei_dat %>%
+  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
+  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
+
+#rename and select variables for soma
+soma_dat <- soma_dat %>%
+  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
+  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
+
+#combine tables for nuclei and soma
+dat_scnn1a <- inner_join(nuclei_dat, soma_dat, by="soma_id")
+
+dat_scnn1a <- dat_scnn1a %>%
+  mutate(nuc_soma_ratio = n_area/s_area)
+```
+
+## Combine counts for Rbp4-Cre, Nr5a1-Cre & Scnn1a-Tg3-Cre.
+```{r combine-dat}
+area.dat <- list()
+area.dat[["rbp4"]] <- dat_rbp4
+area.dat[["nr5a1"]] <- dat_nr5a1
+area.dat[["scnn1a"]] <- dat_scnn1a
+
+```
+
+## Plotting soma area vs nuclei area for Cre-lines.
+```{r plots, echo=FALSE}
+for (cre1 in names(area.dat)) {
+  lm1 <- lm(I(n_area^(3/2)) ~ I(s_area^(3/2)) + 0, data = area.dat[[cre1]])
+  print(paste(cre1, round(coef(lm1), 2)))
+  print(summary(area.dat[[cre1]]$nuc_soma_ratio^(3/2)))
+
+  hist(area.dat[[cre1]]$nuc_soma_ratio^(3/2), main = cre1)
+  
+  g1 <- ggplot(area.dat[[cre1]], aes(x = s_area^(3/2), y = n_area^(3/2))) +
+    geom_point() +
+    geom_smooth(method = "lm", se = TRUE) + 
+    coord_fixed(ratio = 1) +
+    ggtitle(cre1) +
+    theme_bw()
+  plot(g1)
+  
+}
+
+```
+
