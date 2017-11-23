@@ -10,6 +10,15 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+
+RotateCoords <- function(xy, rot.angle = 0) {
+  rotm <- matrix(c(
+      cos(rot.angle),
+      sin(rot.angle),
+      -sin(rot.angle),
+      cos(rot.angle)), ncol = 2)
+  xy.rot <- t(rotm %*% (t(xy) - c(xy[1, 1], xy[1, 2])) + c(xy[1, 1], xy[1, 2]))
+}
 ```
 
 ## Size of nuclei and soma 
@@ -125,33 +134,158 @@ dat_scnn1a <- dat_scnn1a %>%
   mutate(nuc_soma_ratio = n_area/s_area)
 ```
 
+```{r load-scnn1a-tg2}
+dat_scnn1a_tg2 <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/170901_Scnn1a-Tg2_cellnuclei_sizes.csv")
+dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area * 10
+dat_scnn1a_tg2$s_area <- dat_scnn1a_tg2$Cell.Area * 10
+dat_scnn1a_tg2$nuc_soma_ratio <- dat_scnn1a_tg2$n_area / dat_scnn1a_tg2$s_area
+
+```
+
+
+
 ## Combine counts for Rbp4-Cre, Nr5a1-Cre & Scnn1a-Tg3-Cre.
 ```{r combine-dat}
-area.dat <- list()
-area.dat[["rbp4"]] <- dat_rbp4
-area.dat[["nr5a1"]] <- dat_nr5a1
-area.dat[["scnn1a"]] <- dat_scnn1a
-
+area.dat <- rbind(cbind(cre = "rbp4", subset(dat_rbp4, s_area > n_area, 
+                                             select = c("n_area", "s_area", "nuc_soma_ratio"))),
+                  cbind(cre = "nr5a1", subset(dat_nr5a1, s_area > n_area, 
+                                             select = c("n_area", "s_area", "nuc_soma_ratio"))),
+                  cbind(cre = "scnn1a_tg3", subset(dat_scnn1a, s_area > n_area, 
+                                               select = c("n_area", "s_area", "nuc_soma_ratio"))),
+                  cbind(cre = "scnn1a_tg2", subset(dat_scnn1a_tg2, s_area > n_area, 
+                                               select = c("n_area", "s_area", "nuc_soma_ratio"))))
 ```
 
 ## Plotting soma area vs nuclei area for Cre-lines.
 ```{r plots, echo=FALSE}
-for (cre1 in names(area.dat)) {
-  lm1 <- lm(I(n_area^(3/2)) ~ I(s_area^(3/2)) + 0, data = area.dat[[cre1]])
+for (cre1 in unique(area.dat$cre)) {
+  area.subset <- subset(area.dat, cre == cre1)
+  lm1 <- lm(I(n_area^(3/2)) ~ I(s_area^(3/2)) + 0, data = area.subset)
   print(paste(cre1, round(coef(lm1), 2)))
-  print(summary(area.dat[[cre1]]$nuc_soma_ratio^(3/2)))
-
-  hist(area.dat[[cre1]]$nuc_soma_ratio^(3/2), main = cre1)
-  
-  g1 <- ggplot(area.dat[[cre1]], aes(x = s_area^(3/2), y = n_area^(3/2))) +
-    geom_point() +
-    geom_smooth(method = "lm", se = TRUE) + 
-    coord_fixed(ratio = 1) +
-    ggtitle(cre1) +
-    theme_bw()
-  plot(g1)
-  
+  print(summary(area.subset$nuc_soma_ratio^(3/2)))
 }
+
+g.hist <- ggplot(area.dat, aes(x = nuc_soma_ratio^(3/2), fill = cre)) +
+  facet_wrap(~ cre, ncol = 1, scales = "free_y") +
+  geom_histogram() +
+  theme_bw()
+plot(g.hist)
+
+g.box <- ggplot(area.dat, aes(x = cre, y = nuc_soma_ratio^(3/2), 
+                              color = cre)) +
+  geom_violin(size = 1) +
+  # geom_boxplot(outlier.shape = NA, width = 0.1, coef = 0) +
+  stat_summary(fun.ymin = function(z) { quantile(z, 0.25) },
+               fun.ymax = function(z) { quantile(z, 0.75) },
+               fun.y = median, show.legend = FALSE) +
+  geom_jitter(alpha = 0.2, width = 0.3, show.legend = FALSE) +
+  theme_bw()
+plot(g.box)
+
+g1 <- ggplot(area.dat, aes(x = s_area^(3/2), y = n_area^(3/2), 
+                           color = cre, fill = cre)) +
+  # facet_wrap(~ cre, ncol = 1) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = "y ~ 0 + x", se = FALSE) + 
+  # coord_fixed(ratio = 1) +
+  ggtitle(cre1) +
+  theme_bw()
+plot(g1)
+
+
+```
+
+```{r nuc_prop_vs_depth}
+
+# Load dat
+nuc.soma <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/Mouse_V1_soma_nuc_areas.csv")
+layer.anno <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/layer_anno.csv")
+layer.xy <- cbind(layer.anno$CenterX, -layer.anno$CenterY)
+
+nuc.ratio.df <- data.frame()
+for (i in seq(1, nrow(nuc.soma), 2)) {
+  x.mean <- mean(nuc.soma$CenterX[c(i, i + 1)])
+  y.mean <- mean(nuc.soma$CenterY[c(i, i + 1)])
+  # Check that nuc/soma outlines are paired (centers aligned)
+  x.cv <- sd(nuc.soma$CenterX[c(i, i + 1)]) / mean(nuc.soma$CenterX[c(i, i + 1)])
+  nuc.area <- nuc.soma$Area[i + 1]
+  soma.area <- nuc.soma$Area[i]
+  nuc.area.ratio <- nuc.area / soma.area
+  nuc.vol.ratio <- nuc.area.ratio^(3/2)
+  nuc.ratio.df <- rbind(nuc.ratio.df, cbind(x.mean, y.mean, x.cv, nuc.area, soma.area,
+                                            nuc.area.ratio, nuc.vol.ratio))
+}
+
+# Rotate coords
+alpha = -68  # Measured in photoshop
+xy <- cbind(nuc.ratio.df$x.mean, -nuc.ratio.df$y.mean)
+xy.rot <- RotateCoords(xy, rot.angle = alpha)
+# xy.rot <- sweep(xy.rot, 2, apply(xy.rot, 2, min), "-")
+
+nuc.ratio.df <- cbind(nuc.ratio.df, xy.rot)
+nuc.ratio.df$depth_from_pia <- max(nuc.ratio.df$`2`) - nuc.ratio.df$`2`
+nuc.ratio.df$soma.area.bin <- cut(nuc.ratio.df$soma.area, breaks = c(0, 80, 100, 150, 250))
+
+# Add layer anno
+layer.xy.rot <- RotateCoords(layer.xy, alpha)
+
+
+par(mfrow = c(2, 3))
+plot(xy, asp = 1)
+# points(layer.xy.rot, col = "blue", cex = 2, pch = 19)
+plot(xy.rot, asp = 1)
+
+plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.area.ratio, 
+     cex = 3 * nuc.ratio.df$soma.area,
+     main = "Nuc area ratio")
+lm1 <- lm(nuc.area.ratio ~ depth_from_pia, nuc.ratio.df)
+summary(lm1)
+abline(lm1)
+
+soma.scale.factor <- sqrt(nuc.ratio.df$soma.area)
+soma.scale.factor <- soma.scale.factor / max(soma.scale.factor)
+soma.scale.factor2 <- nuc.ratio.df$soma.area - min(nuc.ratio.df$soma.area)
+soma.scale.factor2 <- soma.scale.factor2 / max(soma.scale.factor2)
+plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.vol.ratio, pch = 19,
+     cex = 2 * soma.scale.factor,
+     col = grey(1 - soma.scale.factor2), 
+     main = "Nuc volume ratio")
+lm1 <- lm(nuc.vol.ratio ~ depth_from_pia, nuc.ratio.df)
+summary(lm1)
+abline(lm1)
+
+plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.area, 
+     cex = 3 * nuc.ratio.df$nuc.vol.ratio, 
+     main = "Nuc area")
+lm1 <- lm(nuc.area ~ depth_from_pia, nuc.ratio.df)
+summary(lm1)
+abline(lm1)
+
+plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$soma.area, 
+     cex = 3 * nuc.ratio.df$nuc.vol.ratio, 
+     main = "Soma area")
+lm1 <- lm(soma.area ~ depth_from_pia, nuc.ratio.df)
+summary(lm1)
+abline(lm1)
+
+
+g.nucprop <- ggplot(nuc.ratio.df, aes(x = depth_from_pia, y = nuc.vol.ratio)) +
+  facet_wrap(~ soma.area.bin) +
+  geom_point() +
+  theme_bw()
+plot(g.nucprop)
+
+
+#### Final plot ####
+g1 <- ggplot(nuc.ratio.df, aes(y = -depth_from_pia, x = nuc.ratio.df$nuc.vol.ratio,
+                               size = soma.area^(3/2), color = soma.area^(3/2))) +
+  geom_point(show.legend = FALSE) +
+  xlab("Nuclear proportion") +
+  ylab("Depth from pia") +
+  ggtitle("Nuclear proportion of soma") +
+  scale_color_gradient(low = "grey80", high = "black") +
+  theme_bw()
+plot(g1)
 
 ```
 
