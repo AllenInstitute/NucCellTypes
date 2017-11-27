@@ -136,8 +136,8 @@ dat_scnn1a <- dat_scnn1a %>%
 
 ```{r load-scnn1a-tg2}
 dat_scnn1a_tg2 <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/170901_Scnn1a-Tg2_cellnuclei_sizes.csv")
-dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area * 10
-dat_scnn1a_tg2$s_area <- dat_scnn1a_tg2$Cell.Area * 10
+dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area
+dat_scnn1a_tg2$s_area <- dat_scnn1a_tg2$Cell.Area
 dat_scnn1a_tg2$nuc_soma_ratio <- dat_scnn1a_tg2$n_area / dat_scnn1a_tg2$s_area
 
 ```
@@ -154,6 +154,12 @@ area.dat <- rbind(cbind(cre = "rbp4", subset(dat_rbp4, s_area > n_area,
                                                select = c("n_area", "s_area", "nuc_soma_ratio"))),
                   cbind(cre = "scnn1a_tg2", subset(dat_scnn1a_tg2, s_area > n_area, 
                                                select = c("n_area", "s_area", "nuc_soma_ratio"))))
+
+# Unit conversion
+# Scnn1a-Tg2 1um per unit; other cre-lines 0.22282 um per unit
+area.dat$n_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$n_area[area.dat$cre != "scnn1a_tg2"]
+area.dat$s_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$s_area[area.dat$cre != "scnn1a_tg2"]
+
 ```
 
 ## Plotting soma area vs nuclei area for Cre-lines.
