@@ -1,6 +1,6 @@
 ---
 title: "Soma vs Nuclei Size"
-output: html_document
+output: html_notebook
 author: Thuc Nguyen
 date: 11/13/2017
 ---
@@ -29,13 +29,13 @@ We aim to measure the size of soma and nuclei for cells in different layers of t
 
 Load CellProfiler data.
 ```{r Rbp4 loads, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/")
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/after_edits/")
 
 nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
 soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
 
 #remove any nucleus that shares a parent with another nucleus
-#Parent_Soma in nuclei_dat corresponds to ObjectID for soma in soma_dat
+#Parent_Soma in nuclei_dat corresponds to ObjectNumber for soma in soma_dat
 dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
 nuclei_dat <- nuclei_dat[!dup_index, ]
 
@@ -64,17 +64,17 @@ Load CellProfiler data.
 ```{r Nr5a1, echo=FALSE}
 setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Nr5a1/")
 
-nuclei_dat_1 <- read.csv("stacks_40-45/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_1 <- read.csv("stacks_40-45/Soma.csv",as.is=T,header=T)
+nuclei_dat_1 <- read.csv("stacks_40-45/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_1 <- read.csv("stacks_40-45/after_edits/Soma.csv",as.is=T,header=T)
 
-nuclei_dat_2 <- read.csv("stacks_50-55/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_2 <- read.csv("stacks_50-55/Soma.csv",as.is=T,header=T)
+nuclei_dat_2 <- read.csv("stacks_50-55/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_2 <- read.csv("stacks_50-55/after_edits/Soma.csv",as.is=T,header=T)
 
 nuclei_dat_2$Parent_Soma <- nuclei_dat_2$Parent_Soma + 1000
 soma_dat_2$ObjectNumber <- soma_dat_2$ObjectNumber + 1000
 
-nuclei_dat_3 <- read.csv("stacks_60-65/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_3 <- read.csv("stacks_60-65/Soma.csv",as.is=T,header=T)
+nuclei_dat_3 <- read.csv("stacks_60-65/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
+soma_dat_3 <- read.csv("stacks_60-65/after_edits/Soma.csv",as.is=T,header=T)
 
 nuclei_dat_3$Parent_Soma <- nuclei_dat_3$Parent_Soma + 2000
 soma_dat_3$ObjectNumber <- soma_dat_3$ObjectNumber + 2000
@@ -108,7 +108,7 @@ dat_nr5a1 <- dat_nr5a1 %>%
 
 Load CellProfiler data.
 ```{r Scnn1a, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Scnn1a-Tg3/current/")
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Scnn1a-Tg3/current/after_edits/")
 
 nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
 soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
@@ -134,6 +134,7 @@ dat_scnn1a <- dat_scnn1a %>%
   mutate(nuc_soma_ratio = n_area/s_area)
 ```
 
+
 ```{r load-scnn1a-tg2}
 dat_scnn1a_tg2 <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/170901_Scnn1a-Tg2_cellnuclei_sizes.csv")
 dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area
@@ -156,7 +157,7 @@ area.dat <- rbind(cbind(cre = "rbp4", subset(dat_rbp4, s_area > n_area,
                                                select = c("n_area", "s_area", "nuc_soma_ratio"))))
 
 # Unit conversion
-# Scnn1a-Tg2 1um per unit; other cre-lines 0.22282 um per unit
+# Scnn1a-Tg2 1um per unit; other Cre-lines 0.22282 um per unit
 area.dat$n_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$n_area[area.dat$cre != "scnn1a_tg2"]
 area.dat$s_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$s_area[area.dat$cre != "scnn1a_tg2"]
 
