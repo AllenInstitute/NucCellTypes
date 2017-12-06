@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(feather)
 
 RotateCoords <- function(xy, rot.angle = 0) {
   rotm <- matrix(c(
@@ -29,7 +30,7 @@ We aim to measure the size of soma and nuclei for cells in different layers of t
 
 Load CellProfiler data.
 ```{r Rbp4 loads, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/after_edits/")
+setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/after_edits_v2/")
 
 nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
 soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
@@ -55,7 +56,10 @@ dat_rbp4 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
 dat_rbp4 <- dat_rbp4 %>%
   mutate(nuc_soma_ratio = n_area/s_area)
 
-mean(dat_rbp4$nuc_soma_ratio)
+
+```
+```{r}
+write.csv(dat_rbp4, file = "../data/rbp4_nuc_prop.csv", row.names = FALSE)
 ```
 
 ## Nr5a1-Cre;Ai14 
@@ -101,8 +105,14 @@ dat_nr5a1 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
 
 dat_nr5a1 <- dat_nr5a1 %>%
   mutate(nuc_soma_ratio = n_area/s_area)
+
+
 ```
 
+```{r}
+write.csv(dat_nr5a1, file = "../data/nr5a1_nuc_prop.csv", row.names = FALSE)
+
+```
 
 ## Scnn1a-Tg3-Cre;Ai14 
 
@@ -132,10 +142,16 @@ dat_scnn1a <- inner_join(nuclei_dat, soma_dat, by="soma_id")
 
 dat_scnn1a <- dat_scnn1a %>%
   mutate(nuc_soma_ratio = n_area/s_area)
+
+
+```
+```{r}
+write.csv(dat_scnn1a, file = "../data/scnn1a_nuc_prop.csv", row.names = FALSE)
+
 ```
 
 
-```{r load-scnn1a-tg2}
+```{r load-scnn1a-tg2, eval = FALSE}
 dat_scnn1a_tg2 <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/170901_Scnn1a-Tg2_cellnuclei_sizes.csv")
 dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area
 dat_scnn1a_tg2$s_area <- dat_scnn1a_tg2$Cell.Area
@@ -152,9 +168,9 @@ area.dat <- rbind(cbind(cre = "rbp4", subset(dat_rbp4, s_area > n_area,
                   cbind(cre = "nr5a1", subset(dat_nr5a1, s_area > n_area, 
                                              select = c("n_area", "s_area", "nuc_soma_ratio"))),
                   cbind(cre = "scnn1a_tg3", subset(dat_scnn1a, s_area > n_area, 
-                                               select = c("n_area", "s_area", "nuc_soma_ratio"))),
-                  cbind(cre = "scnn1a_tg2", subset(dat_scnn1a_tg2, s_area > n_area, 
                                                select = c("n_area", "s_area", "nuc_soma_ratio"))))
+                  # cbind(cre = "scnn1a_tg2", subset(dat_scnn1a_tg2, s_area > n_area, 
+                  #                              select = c("n_area", "s_area", "nuc_soma_ratio"))))
 
 # Unit conversion
 # Scnn1a-Tg2 1um per unit; other Cre-lines 0.22282 um per unit
@@ -164,7 +180,7 @@ area.dat$s_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$s_area[are
 ```
 
 ## Plotting soma area vs nuclei area for Cre-lines.
-```{r plots, echo=FALSE}
+```{r plots, echo=FALSE, fig.width=4, fig.height = 4}
 for (cre1 in unique(area.dat$cre)) {
   area.subset <- subset(area.dat, cre == cre1)
   lm1 <- lm(I(n_area^(3/2)) ~ I(s_area^(3/2)) + 0, data = area.subset)
@@ -172,37 +188,54 @@ for (cre1 in unique(area.dat$cre)) {
   print(summary(area.subset$nuc_soma_ratio^(3/2)))
 }
 
-g.hist <- ggplot(area.dat, aes(x = nuc_soma_ratio^(3/2), fill = cre)) +
-  facet_wrap(~ cre, ncol = 1, scales = "free_y") +
-  geom_histogram() +
-  theme_bw()
-plot(g.hist)
-
-g.box <- ggplot(area.dat, aes(x = cre, y = nuc_soma_ratio^(3/2), 
-                              color = cre)) +
-  geom_violin(size = 1) +
-  # geom_boxplot(outlier.shape = NA, width = 0.1, coef = 0) +
-  stat_summary(fun.ymin = function(z) { quantile(z, 0.25) },
-               fun.ymax = function(z) { quantile(z, 0.75) },
-               fun.y = median, show.legend = FALSE) +
-  geom_jitter(alpha = 0.2, width = 0.3, show.legend = FALSE) +
-  theme_bw()
-plot(g.box)
-
-g1 <- ggplot(area.dat, aes(x = s_area^(3/2), y = n_area^(3/2), 
-                           color = cre, fill = cre)) +
+g1 <- ggplot(area.dat, aes(x = s_area, y = n_area, color = cre)) +
   # facet_wrap(~ cre, ncol = 1) +
   geom_point() +
   geom_smooth(method = "lm", formula = "y ~ 0 + x", se = FALSE) + 
   # coord_fixed(ratio = 1) +
-  ggtitle(cre1) +
   theme_bw()
 plot(g1)
 
 
+g.hist <- ggplot(area.dat, aes(x = nuc_soma_ratio^(3/2))) +
+  facet_wrap(~ cre, ncol = 1, scales = "free_y") +
+  geom_histogram(bins = 15) +
+  theme_bw()
+plot(g.hist)
+
+nuc.prop.expected <- data.frame(cre = c("rbp4", "nr5a1", "scnn1a_tg3"),
+                                ex_nuc_prop = c(0.29, 0.49, 0.50),
+                                ex_nuc_prop_minus_sd = c(0.19, 0.36, 0.38),
+                                ex_nuc_prop_plus_sd = c(0.39, 0.62, 0.63),
+                                i_nuc_prop = c(0.46, 0.72, 0.74),
+                                i_nuc_prop_minus_sd = c(0.34, 0.59, 0.61),
+                                i_nuc_prop_plus_sd = c(0.58, 0.84, 0.86))
+g.box <- ggplot(area.dat, aes(x = cre, y = nuc_soma_ratio^(3/2))) +
+  geom_violin(size = 1) +
+  # geom_point(data = nuc.prop.expected, mapping = aes(x = cre, y = i_nuc_prop)) +
+  # stat_summary(fun.ymin = function(z) { mean(z) - sd(z) },
+  #              fun.ymax = function(z) { mean(z) + sd(z) },
+  #              fun.y = mean, show.legend = FALSE) +
+  # stat_summary(fun.ymin = function(z) { quantile(z, 0.25) },
+  #              fun.ymax = function(z) { quantile(z, 0.75) },
+  #              fun.y = median, show.legend = FALSE) +
+  geom_jitter(alpha = 0.2, width = 0.3, show.legend = FALSE) +
+  geom_segment(data = nuc.prop.expected, color = "blue", size = 1,   
+               mapping = aes(x = cre, xend = cre, y = ex_nuc_prop, 
+                             yend = i_nuc_prop)) +
+  stat_summary(fun.y = median, geom = "point", size = 3, show.legend = FALSE) +
+  # geom_boxplot(outlier.shape = NA, width = 0.1, coef = 0) +
+  xlab("Cre-line") +
+  ylab("Nuclear proportion") +
+  theme_bw()
+plot(g.box)
+
+
+
+
 ```
 
-```{r nuc_prop_vs_depth}
+```{r nuc_prop_vs_depth, fig.width=4, fig.height = 4}
 
 # Load dat
 nuc.soma <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/Mouse_V1_soma_nuc_areas.csv")
