@@ -160,23 +160,24 @@ dat_scnn1a_tg2$nuc_soma_ratio <- dat_scnn1a_tg2$n_area / dat_scnn1a_tg2$s_area
 ```
 
 
-
 ## Combine counts for Rbp4-Cre, Nr5a1-Cre & Scnn1a-Tg3-Cre.
 ```{r combine-dat}
-area.dat <- rbind(cbind(cre = "rbp4", subset(dat_rbp4, s_area > n_area, 
-                                             select = c("n_area", "s_area", "nuc_soma_ratio"))),
-                  cbind(cre = "nr5a1", subset(dat_nr5a1, s_area > n_area, 
-                                             select = c("n_area", "s_area", "nuc_soma_ratio"))),
-                  cbind(cre = "scnn1a_tg3", subset(dat_scnn1a, s_area > n_area, 
-                                               select = c("n_area", "s_area", "nuc_soma_ratio"))))
-                  # cbind(cre = "scnn1a_tg2", subset(dat_scnn1a_tg2, s_area > n_area, 
-                  #                              select = c("n_area", "s_area", "nuc_soma_ratio"))))
+cre.lines <- c("rbp4", "nr5a1", "scnn1a_tg3")
 
-# Unit conversion
-# Scnn1a-Tg2 1um per unit; other Cre-lines 0.22282 um per unit
-area.dat$n_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$n_area[area.dat$cre != "scnn1a_tg2"]
-area.dat$s_area[area.dat$cre != "scnn1a_tg2"] <- 0.22282^2 * area.dat$s_area[area.dat$cre != "scnn1a_tg2"]
+area.dat <- NULL
+for (cre1 in cre.lines) {
+  area1 <- read.csv(file = paste0("../data/", cre1, "_nuc_prop.csv"))
+  area1.subset <- subset(area1, s_area > n_area, 
+                         select = c("n_area", "s_area", "nuc_soma_ratio"))
+  
+  # Unit conversion (0.22282 um per unit)
+  area1.subset$n_area <- 0.22282^2 * area1.subset$n_area
+  area1.subset$s_area <- 0.22282^2 * area1.subset$s_area
+  
+  area.dat <- rbind(area.dat, cbind(cre = cre1, area1.subset))
+}
 
+write.csv(area.dat, file = "../data/nuc_soma_area.csv", row.names = FALSE)
 ```
 
 ## Plotting soma area vs nuclei area for Cre-lines.
