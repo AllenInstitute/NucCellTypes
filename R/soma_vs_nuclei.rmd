@@ -1,14 +1,10 @@
 ---
 title: "Soma vs Nuclei Size"
 output: html_notebook
-author: Thuc Nguyen
-date: 11/13/2017
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(dplyr)
-library(tidyr)
 library(ggplot2)
 library(feather)
 
@@ -26,222 +22,62 @@ RotateCoords <- function(xy, rot.angle = 0) {
 
 We aim to measure the size of soma and nuclei for cells in different layers of the mouse visual cortex. Cells labeled by layer-enriched Cre lines crossed to Ai14 are imaged on confocal microscope. Maximum intensity projection of 5-um optical z-stacks (at 1-um intervals) from confocal images are analyzed on CellProfiler to segment soma and their associated nuclei.
 
-## Rbp4-Cre;Ai14 
-
-Load CellProfiler data.
-```{r Rbp4 loads, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Rbp4/current/after_edits_v2/")
-
-nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
-
-#remove any nucleus that shares a parent with another nucleus
-#Parent_Soma in nuclei_dat corresponds to ObjectNumber for soma in soma_dat
-dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
-nuclei_dat <- nuclei_dat[!dup_index, ]
-
-#rename and select variables for nuclei
-nuclei_dat <- nuclei_dat %>%
-  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
-  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
-
-#rename and select variables for soma
-soma_dat <- soma_dat %>%
-  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
-  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
-
-#combine tables for nuclei and soma
-dat_rbp4 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
-
-dat_rbp4 <- dat_rbp4 %>%
-  mutate(nuc_soma_ratio = n_area/s_area)
-
-
-```
-```{r}
-write.csv(dat_rbp4, file = "../data/rbp4_nuc_prop.csv", row.names = FALSE)
-```
-
-## Nr5a1-Cre;Ai14 
-
-Load CellProfiler data.
-```{r Nr5a1, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Nr5a1/")
-
-nuclei_dat_1 <- read.csv("stacks_40-45/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_1 <- read.csv("stacks_40-45/after_edits/Soma.csv",as.is=T,header=T)
-
-nuclei_dat_2 <- read.csv("stacks_50-55/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_2 <- read.csv("stacks_50-55/after_edits/Soma.csv",as.is=T,header=T)
-
-nuclei_dat_2$Parent_Soma <- nuclei_dat_2$Parent_Soma + 1000
-soma_dat_2$ObjectNumber <- soma_dat_2$ObjectNumber + 1000
-
-nuclei_dat_3 <- read.csv("stacks_60-65/after_edits/Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat_3 <- read.csv("stacks_60-65/after_edits/Soma.csv",as.is=T,header=T)
-
-nuclei_dat_3$Parent_Soma <- nuclei_dat_3$Parent_Soma + 2000
-soma_dat_3$ObjectNumber <- soma_dat_3$ObjectNumber + 2000
-
-nuclei_dat <- rbind(nuclei_dat_1, nuclei_dat_2, nuclei_dat_3)
-soma_dat <- rbind(soma_dat_1, soma_dat_2, soma_dat_3)
-
-#remove any nucleus that shares a parent with another nucleus
-dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
-nuclei_dat <- nuclei_dat[!dup_index, ]
-
-#rename and select variables for nuclei
-nuclei_dat <- nuclei_dat %>%
-  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
-  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
-
-#rename and select variables for soma
-soma_dat <- soma_dat %>%
-  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
-  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
-
-#combine tables for nuclei and soma
-dat_nr5a1 <- inner_join(nuclei_dat, soma_dat, by="soma_id")
-
-dat_nr5a1 <- dat_nr5a1 %>%
-  mutate(nuc_soma_ratio = n_area/s_area)
-
-
-```
-
-```{r}
-write.csv(dat_nr5a1, file = "../data/nr5a1_nuc_prop.csv", row.names = FALSE)
-
-```
-
-## Scnn1a-Tg3-Cre;Ai14 
-
-Load CellProfiler data.
-```{r Scnn1a, echo=FALSE}
-setwd("//allen/programs/celltypes/workgroups/mct-t200/Microscopy/Soma_vs_nuclei/Scnn1a-Tg3/current/after_edits/")
-
-nuclei_dat <- read.csv("Nuclei_in_Soma.csv",as.is=T,header=T)
-soma_dat <- read.csv("Soma.csv",as.is=T,header=T)
-
-#remove any nucleus that shares a parent with another nucleus
-dup_index <- duplicated(nuclei_dat$Parent_Soma) | duplicated(nuclei_dat$Parent_Soma, fromLast=T)
-nuclei_dat <- nuclei_dat[!dup_index, ]
-
-#rename and select variables for nuclei
-nuclei_dat <- nuclei_dat %>%
-  select(ObjectNumber, AreaShape_Area, Parent_Soma) %>%
-  rename(n_area = AreaShape_Area, soma_id = Parent_Soma, nuc_id = ObjectNumber) 
-
-#rename and select variables for soma
-soma_dat <- soma_dat %>%
-  select(ObjectNumber, AreaShape_Area, Location_Center_X, Location_Center_Y) %>%
-  rename(s_area = AreaShape_Area, soma_id = ObjectNumber, locX = Location_Center_X, locY = Location_Center_Y) 
-
-#combine tables for nuclei and soma
-dat_scnn1a <- inner_join(nuclei_dat, soma_dat, by="soma_id")
-
-dat_scnn1a <- dat_scnn1a %>%
-  mutate(nuc_soma_ratio = n_area/s_area)
-
-
-```
-```{r}
-write.csv(dat_scnn1a, file = "../data/scnn1a_nuc_prop.csv", row.names = FALSE)
-
-```
-
-
-```{r load-scnn1a-tg2, eval = FALSE}
-dat_scnn1a_tg2 <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/170901_Scnn1a-Tg2_cellnuclei_sizes.csv")
-dat_scnn1a_tg2$n_area <- dat_scnn1a_tg2$Nucleus.Area
-dat_scnn1a_tg2$s_area <- dat_scnn1a_tg2$Cell.Area
-dat_scnn1a_tg2$nuc_soma_ratio <- dat_scnn1a_tg2$n_area / dat_scnn1a_tg2$s_area
-
-```
-
-
-## Combine counts for Rbp4-Cre, Nr5a1-Cre & Scnn1a-Tg3-Cre.
-```{r combine-dat}
-cre.lines <- c("rbp4", "nr5a1", "scnn1a_tg3")
-
-area.dat <- NULL
-for (cre1 in cre.lines) {
-  area1 <- read.csv(file = paste0("../data/", cre1, "_nuc_prop.csv"))
-  area1.subset <- subset(area1, s_area > n_area, 
-                         select = c("n_area", "s_area", "nuc_soma_ratio"))
-  
-  # Unit conversion (0.22282 um per unit)
-  area1.subset$n_area <- 0.22282^2 * area1.subset$n_area
-  area1.subset$s_area <- 0.22282^2 * area1.subset$s_area
-  
-  area.dat <- rbind(area.dat, cbind(cre = cre1, area1.subset))
-}
-
-write.csv(area.dat, file = "../data/nuc_soma_area.csv", row.names = FALSE)
-```
-
 ## Plotting soma area vs nuclei area for Cre-lines.
-```{r plots, echo=FALSE, fig.width=4, fig.height = 4}
+```{r plot-nuc-prop-vs-cre, echo=FALSE, fig.width=4, fig.height = 4}
+# Load data
+area.dat <- read.csv(file = "../data/nuc_soma_area_cre_lines.csv")
+
+area.dat$n_vol_est <- area.dat$n_area^(3/2)
+area.dat$s_vol_est <- area.dat$s_area^(3/2)
+area.dat$nuc_soma_ratio_vol <- area.dat$n_vol_est / area.dat$s_vol_est
+
 for (cre1 in unique(area.dat$cre)) {
   area.subset <- subset(area.dat, cre == cre1)
-  lm1 <- lm(I(n_area^(3/2)) ~ I(s_area^(3/2)) + 0, data = area.subset)
+  lm1 <- lm(I(n_vol_est) ~ I(s_vol_est) + 0, data = area.subset)
   print(paste(cre1, round(coef(lm1), 2)))
-  print(summary(area.subset$nuc_soma_ratio^(3/2)))
+  # print(summary(area.subset$nuc_soma_ratio_vol))
 }
 
-g1 <- ggplot(area.dat, aes(x = s_area, y = n_area, color = cre)) +
+aov1 <- aov(nuc_soma_ratio_vol ~ cre, data = area.dat)
+summary(aov1)
+print(TukeyHSD(aov1))
+
+g.scatter <- ggplot(area.dat, aes(x = s_area, y = n_area, color = cre)) +
   # facet_wrap(~ cre, ncol = 1) +
-  geom_point() +
-  geom_smooth(method = "lm", formula = "y ~ 0 + x", se = FALSE) + 
-  # coord_fixed(ratio = 1) +
+  geom_point(size = 0.5) +
+  geom_smooth(method = "lm", formula = "y ~ 0 + x", se = FALSE, size = 0.3) + 
+  xlab(expression(paste("Soma area (", mu*m^2, ")"))) +
+  ylab(expression(paste("Nucleus area (", mu*m^2, ")"))) +
   theme_bw()
-plot(g1)
+plot(g.scatter)
+ggsave(g.scatter, file = "../output/nuc_prop_cre_scatter.pdf", 
+       height = 2.5, width = 4)
 
 
-g.hist <- ggplot(area.dat, aes(x = nuc_soma_ratio^(3/2))) +
-  facet_wrap(~ cre, ncol = 1, scales = "free_y") +
-  geom_histogram(bins = 15) +
-  theme_bw()
-plot(g.hist)
-
+# Cre-line nuclear proportions estimated based on cell type mixture
 nuc.prop.expected <- data.frame(cre = c("rbp4", "nr5a1", "scnn1a_tg3"),
-                                ex_nuc_prop = c(0.29, 0.49, 0.50),
-                                ex_nuc_prop_minus_sd = c(0.19, 0.36, 0.38),
-                                ex_nuc_prop_plus_sd = c(0.39, 0.62, 0.63),
-                                i_nuc_prop = c(0.46, 0.72, 0.74),
-                                i_nuc_prop_minus_sd = c(0.34, 0.59, 0.61),
-                                i_nuc_prop_plus_sd = c(0.58, 0.84, 0.86))
-g.box <- ggplot(area.dat, aes(x = cre, y = nuc_soma_ratio^(3/2))) +
-  geom_violin(size = 1) +
-  # geom_point(data = nuc.prop.expected, mapping = aes(x = cre, y = i_nuc_prop)) +
-  # stat_summary(fun.ymin = function(z) { mean(z) - sd(z) },
-  #              fun.ymax = function(z) { mean(z) + sd(z) },
-  #              fun.y = mean, show.legend = FALSE) +
-  # stat_summary(fun.ymin = function(z) { quantile(z, 0.25) },
-  #              fun.ymax = function(z) { quantile(z, 0.75) },
-  #              fun.y = median, show.legend = FALSE) +
-  geom_jitter(alpha = 0.2, width = 0.3, show.legend = FALSE) +
-  geom_segment(data = nuc.prop.expected, color = "blue", size = 1,   
-               mapping = aes(x = cre, xend = cre, y = ex_nuc_prop, 
-                             yend = i_nuc_prop)) +
-  stat_summary(fun.y = median, geom = "point", size = 3, show.legend = FALSE) +
-  # geom_boxplot(outlier.shape = NA, width = 0.1, coef = 0) +
+                                expr_nuc_prop = c(0.29, 0.49, 0.50),
+                                intron_nuc_prop = c(0.46, 0.72, 0.74))
+g.vio <- ggplot(area.dat, aes(x = cre, y = nuc_soma_ratio_vol)) +
+  geom_violin(size = 0.3) +
+  geom_jitter(alpha = 0.2, width = 0.3, size = 0.5, show.legend = FALSE) +
+  geom_segment(data = nuc.prop.expected, color = "blue", size = 0.8,   
+               mapping = aes(x = cre, xend = cre, y = expr_nuc_prop, 
+                             yend = intron_nuc_prop)) +
+  stat_summary(fun.y = mean, geom = "point", size = 2.5, show.legend = FALSE) +
   xlab("Cre-line") +
   ylab("Nuclear proportion") +
   theme_bw()
-plot(g.box)
-
-
-
+plot(g.vio)
+ggsave(g.vio, file = "../output/nuc_prop_cre_violin.pdf", 
+       height = 2.5, width = 2.5)
 
 ```
 
-```{r nuc_prop_vs_depth, fig.width=4, fig.height = 4}
-
+```{r nuc_prop_vs_depth, fig.width=6, fig.height = 4}
 # Load dat
-nuc.soma <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/Mouse_V1_soma_nuc_areas.csv")
-layer.anno <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Figures/Figure 5/nuc_soma_exp/layer_anno.csv")
-layer.xy <- cbind(layer.anno$CenterX, -layer.anno$CenterY)
+nuc.soma <- read.csv(file = "../data/nuc_soma_area_wt.csv")
+
 
 nuc.ratio.df <- data.frame()
 for (i in seq(1, nrow(nuc.soma), 2)) {
@@ -258,75 +94,25 @@ for (i in seq(1, nrow(nuc.soma), 2)) {
 }
 
 # Rotate coords
-alpha = -68  # Measured in photoshop
+alpha = -68  # Measured rotation
 xy <- cbind(nuc.ratio.df$x.mean, -nuc.ratio.df$y.mean)
 xy.rot <- RotateCoords(xy, rot.angle = alpha)
-# xy.rot <- sweep(xy.rot, 2, apply(xy.rot, 2, min), "-")
 
 nuc.ratio.df <- cbind(nuc.ratio.df, xy.rot)
-nuc.ratio.df$depth_from_pia <- max(nuc.ratio.df$`2`) - nuc.ratio.df$`2`
-nuc.ratio.df$soma.area.bin <- cut(nuc.ratio.df$soma.area, breaks = c(0, 80, 100, 150, 250))
-
-# Add layer anno
-layer.xy.rot <- RotateCoords(layer.xy, alpha)
+nuc.ratio.df$depth_from_pia <- max(nuc.ratio.df$`2`) - nuc.ratio.df$`2` + 30
 
 
-par(mfrow = c(2, 3))
-plot(xy, asp = 1)
-# points(layer.xy.rot, col = "blue", cex = 2, pch = 19)
-plot(xy.rot, asp = 1)
-
-plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.area.ratio, 
-     cex = 3 * nuc.ratio.df$soma.area,
-     main = "Nuc area ratio")
-lm1 <- lm(nuc.area.ratio ~ depth_from_pia, nuc.ratio.df)
-summary(lm1)
-abline(lm1)
-
-soma.scale.factor <- sqrt(nuc.ratio.df$soma.area)
-soma.scale.factor <- soma.scale.factor / max(soma.scale.factor)
-soma.scale.factor2 <- nuc.ratio.df$soma.area - min(nuc.ratio.df$soma.area)
-soma.scale.factor2 <- soma.scale.factor2 / max(soma.scale.factor2)
-plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.vol.ratio, pch = 19,
-     cex = 2 * soma.scale.factor,
-     col = grey(1 - soma.scale.factor2), 
-     main = "Nuc volume ratio")
-lm1 <- lm(nuc.vol.ratio ~ depth_from_pia, nuc.ratio.df)
-summary(lm1)
-abline(lm1)
-
-plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$nuc.area, 
-     cex = 3 * nuc.ratio.df$nuc.vol.ratio, 
-     main = "Nuc area")
-lm1 <- lm(nuc.area ~ depth_from_pia, nuc.ratio.df)
-summary(lm1)
-abline(lm1)
-
-plot(nuc.ratio.df$depth_from_pia, nuc.ratio.df$soma.area, 
-     cex = 3 * nuc.ratio.df$nuc.vol.ratio, 
-     main = "Soma area")
-lm1 <- lm(soma.area ~ depth_from_pia, nuc.ratio.df)
-summary(lm1)
-abline(lm1)
-
-
-g.nucprop <- ggplot(nuc.ratio.df, aes(x = depth_from_pia, y = nuc.vol.ratio)) +
-  facet_wrap(~ soma.area.bin) +
-  geom_point() +
-  theme_bw()
-plot(g.nucprop)
-
-
-#### Final plot ####
-g1 <- ggplot(nuc.ratio.df, aes(y = -depth_from_pia, x = nuc.ratio.df$nuc.vol.ratio,
+g.prop.v.depth <- ggplot(nuc.ratio.df, aes(y = -depth_from_pia, x = nuc.ratio.df$nuc.vol.ratio,
                                size = soma.area^(3/2), color = soma.area^(3/2))) +
   geom_point(show.legend = FALSE) +
   xlab("Nuclear proportion") +
-  ylab("Depth from pia") +
-  ggtitle("Nuclear proportion of soma") +
+  ylab(expression(paste("Depth from pia (", mu*m, ")"))) +
+  # ggtitle("Nuclear proportion of soma") +
   scale_color_gradient(low = "grey80", high = "black") +
-  theme_bw()
-plot(g1)
+  theme_bw(base_size = 18)
+plot(g.prop.v.depth)
+ggsave(g.prop.v.depth, file = "../output/nuc_prop_vs_depth.pdf", 
+       height = 4, width = 4)
 
 ```
 
