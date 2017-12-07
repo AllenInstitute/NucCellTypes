@@ -51,8 +51,9 @@ for (dat1 in names(paths)) {
 # Cre line proportions of cells matched to nuclei
 cre.cnt <- table(anno[["Mouse_L5_Cell"]]$cluster_label, 
                  anno[["Mouse_L5_Cell"]]$cre_line_label)
+write.csv(cre.cnt, file = "output/cre_cluster.csv")
 cre.prop <- sweep(cre.cnt, 1, rowSums(cre.cnt), "/")
-pheatmap(cre.prop)
+pheatmap(cre.prop, cluster_rows = FALSE)
 
 
 # Layer proportions of clusters
