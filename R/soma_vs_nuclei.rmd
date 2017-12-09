@@ -102,6 +102,7 @@ xy.rot <- RotateCoords(xy, rot.angle = alpha)
 nuc.ratio.df <- cbind(nuc.ratio.df, xy.rot)
 nuc.ratio.df$depth_from_pia <- max(nuc.ratio.df$`2`) - nuc.ratio.df$`2` + 30
 
+
 # Layer annotation
 layer.prop <- c(0, 0.12, 0.36, 0.08, 0.23, 0.21)  # Nissl annotated
 layer.depth <- cumsum(layer.prop) * (max(nuc.ratio.df$depth_from_pia) + 10)
@@ -109,11 +110,18 @@ nuc.ratio.df$layer <- cut(nuc.ratio.df$depth_from_pia, breaks = layer.depth,
                           labels = paste0("L", c(1, "2/3", 4, 5, 6)))
 layer.depth.df <- data.frame(x1 = 0.2, x2 = 0.3,
                              y1 = -layer.depth, y2 = -layer.depth)
+prop.bylayer <- tapply(nuc.ratio.df$nuc.vol.ratio, nuc.ratio.df$layer, mean)
 
+layer.midpt <- NULL
+for (i in 2:length(layer.depth)) {
+  layer.width <- layer.depth[i] - layer.depth[i-1]
+  layer.midpt <- c(layer.midpt, layer.depth[i] - layer.width / 2)
+}
 
 g.prop.v.depth <- ggplot(nuc.ratio.df, aes(y = -depth_from_pia, x = nuc.vol.ratio,
                                size = soma.area^(3/2), color = soma.area^(3/2))) +
   geom_point(show.legend = FALSE) +
+  # geom_point(data = data.frame(x = prop.bylayer, y = -layer.midpt), aes(x = x, y = y)) +
   geom_segment(data = layer.depth.df, aes(x = x1, xend = x2, y = y1, yend = y2),
                color = "black", size = 1, alpha = 0.5) +
   scale_x_continuous(limits = c(0.2, 1)) +
@@ -157,7 +165,7 @@ g.counts <- ggplot(probe.cntl, aes(x = cell, y = nuc, color = Probe)) +
   # scale_y_continuous(breaks = c(1, 5, 10, 50)) +
   xlab("Cell counts") +
   ylab("Nuclear counts") +
-  theme_bw(base_size = 18, panel.grid.minor = element_blank()) +
+  theme_bw(base_size = 18) +
   theme(panel.grid.minor = element_blank())
 plot(g.counts)
 ggsave(g.counts, file = "../output/nuc_cell_probe_counts.pdf", 
