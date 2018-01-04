@@ -249,7 +249,18 @@ ggsave(g.nucfrac.hist, filename = "output/nucfrac_hist_by_genetype5.pdf",
 
 
 
-# Non-coding/pseudogenes better markers
+#### Non-coding/pseudogenes better markers ####
+gene <- read.csv("C:/Users/trygveb/Dropbox/AIBS/Transcriptomics/Manuscripts/WholeCell_vs_Nuc/Tables/gene_info.csv")
+gene2 <- droplevels(subset(gene, type_of_gene %in% c("protein-coding", "pseudo", "ncRNA") & 
+                             nuclear.prop <= 1 &
+                             (((inh.clusters_nuc + exc.clusters_nuc) > 0 & fpkm.max_nuc > 1) | 
+                             ((inh.clusters_cell + exc.clusters_cell) > 0 & fpkm.max_cell > 1))))
+
+kt1 <- kruskal.test(gene2$marker.score_cell ~ gene2$type_of_gene)
+pw.wt1 <- pairwise.wilcox.test(gene2$marker.score_cell, gene2$type_of_gene, 
+                               paired = FALSE, p.adjust.method = "bonf")
+
+
 g.marker.bygene <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
                           aes(x = type_of_gene, y = beta.prop1_cell, fill = type_of_gene)) +
   geom_violin(lwd = 0.1, show.legend = FALSE) +
@@ -272,13 +283,36 @@ ggsave(g.marker.bygene, filename = "output/marker_score_vs_genetype3.pdf",
 
 
 # Cytoplasm enriched genes are less specifically expressed (majority are in all clusters)
+nucprop.bins <- seq(0, 1, 0.1)
+gene2$nuclear.prop.bin <- cut(gene2$nuclear.prop, nucprop.bins, include.lowest = TRUE)
+levels(gene2$nuclear.prop.bin) <- paste0(nucprop.bins[-length(nucprop.bins)], 
+                                            "-", nucprop.bins[-1])
+kt2 <- kruskal.test(gene2$marker.score_cell ~ gene2$nuclear.prop.bin)
+pw.wt2 <- pairwise.wilcox.test(gene2$marker.score_cell, gene2$nuclear.prop.bin, 
+                               paired = FALSE, p.adjust.method = "bonf")
+# prop.median <- tapply(gene2$marker.score_cell, gene2$nuclear.prop.bin, median)
+# prop.median.df <- data.frame(x = seq(0.05, 0.95, 0.1), y = prop.median)
+# summary(lm(y ~ x, data = prop.median.df))
+# summary(lm(beta.prop1_cell ~ I(as.numeric(nucfrac.bin) / 10 - 0.05), 
+#            data = subset(all.gene.info.subset, type_of_gene %in% gene.types)))
+summary(lm(beta.prop1_cell ~ nucfrac, 
+           data = subset(all.gene.info.subset, type_of_gene %in% gene.types)))
+# Coefficients:
+#   Estimate Std. Error t value Pr(>|t|)    
+# (Intercept) 0.214165   0.003018  70.963  < 2e-16 ***
+#   nucfrac     0.040506   0.007241   5.594 2.27e-08 ***
+# TukeyHSD(aov(gene2$marker.score_cell ~ gene2$nuclear.prop.bin))
+
+
 mean.score <- median(subset(all.gene.info.subset, type_of_gene %in% gene.types)$beta.prop1_cell)
 g.marker.bynucprop <- ggplot(subset(all.gene.info.subset, type_of_gene %in% gene.types), 
                        aes(x = nucfrac.bin, y = beta.prop1_cell)) +
   # facet_wrap(~ type_of_gene) +
   geom_boxplot(fill = "grey", outlier.color = "grey90",
                outlier.size = 0.2, lwd = 0.1, fatten = 8) +
-  geom_hline(yintercept = mean.score, col = "light blue") +
+  # geom_hline(yintercept = mean.score, col = "light blue") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, 
+              aes(group = 1), col = "light blue") +
   xlab("Nuclear proportion") +
   ylab("Marker score") +
   theme_bw() +
@@ -319,7 +353,7 @@ kt1 <- kruskal.test(beta.prop1_cell ~ nucfrac.bin,
 print(summary(kt1))
 pw.wt1 <- pairwise.wilcox.test(subset(all.gene.info.subset, type_of_gene %in% gene.types)$beta.prop1_cell,
                                  subset(all.gene.info.subset, type_of_gene %in% gene.types)$nucfrac.bin, 
-                                 p.adjust.method = "BH")
+                                 p.adjust.method = "bonf")
 
 
 
@@ -400,6 +434,10 @@ g.nucprop.hist.compare <- ggplot(all.gene.info.subset2l,
 plot(g.nucprop.hist.compare)
 ggsave(g.nucprop.hist.compare, width = 5, height = 2,
        filename = "output/nucprop_compare_hist_halpern2015.pdf")
+
+
+
+
 
 
 
