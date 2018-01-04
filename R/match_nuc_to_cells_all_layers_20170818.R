@@ -2,15 +2,6 @@ library(pheatmap)
 library(RColorBrewer)
 library(ggplot2)
 
-resave <- function(..., list = character(), file) {
-  previous  <- load(file)
-  var.names <- c(list, as.character(substitute(list(...)))[-1L])
-  for (var in var.names) assign(var, get(var, envir = parent.frame()))
-  save(list = unique(c(previous, var.names)), file = file)
-}
-
-
-
 
 input.path.cell <- "//allen/programs/celltypes/workgroups/rnaseqanalysis/STARforLIMS/Mouse/Final_Output/Mouse_Final_21913"
 input.path.cell.nuc <- "//allen/programs/celltypes/workgroups/rnaseqanalysis/STARforLIMS/Mouse/Final_Output/VISp_L5"
