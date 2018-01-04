@@ -46,10 +46,10 @@ nbt.data.cell.exon <- nbt.data
 
 
 # Load correlation data
-load("../analysis/match_nuc_cell/map_nuc_to_cells.rda")
+load("../data/map_nuc_to_cells.rda")
 
 # Load gene lengths
-gene.len <- read.csv(file = "../lib/mouse_GRCm38_gene_len.csv")
+gene.len <- read.csv(file = "../data/mouse_GRCm38_gene_len.csv")
 gene.len$gene_orig <- gene.len$gene
 gene.len$gene <- toupper(gene.len$gene)
 
@@ -81,11 +81,11 @@ genes <- apply(cpm.subset.mean, 2, function(x) rownames(cpm.subset.mean)[x > 1])
 cell.genes <- setdiff(genes$Cells, genes$Nuclei)
 nuc.genes <- setdiff(genes$Nuclei, genes$Cells)
 
-write.csv(cell.genes, file="../analysis/nuc_vs_cell/cell.genes_gt1.csv", row.names=FALSE)
-write.csv(nuc.genes, file="../analysis/nuc_vs_cell/nuc.genes_gt1.csv", row.names=FALSE)
+write.csv(cell.genes, file="../output/cell.genes_gt1.csv", row.names=FALSE)
+write.csv(nuc.genes, file="../output/nuc.genes_gt1.csv", row.names=FALSE)
 
-write.csv(genes$Nuclei, file="../analysis/nuc_vs_cell/nuc.all.genes_gt1.csv", row.names=FALSE)
-write.csv(genes$Cells, file="../analysis/nuc_vs_cell/cell.all.genes_gt1.csv", row.names=FALSE)
+write.csv(genes$Nuclei, file="../output/nuc.all.genes_gt1.csv", row.names=FALSE)
+write.csv(genes$Cells, file="../output/cell.all.genes_gt1.csv", row.names=FALSE)
 
 
 # Plot expression correlation within methods (single cell)
@@ -116,7 +116,7 @@ for (i in 1:nlevels(samp.subset$Samples)) {
     theme_bw()
   plot(g1)
   ggsave(g1, width = 3, height = 3, dpi = 600,
-         filename = paste0("../analysis/nuc_vs_cell/", method1, "_pair.png"))
+         filename = paste0("../output/", method1, "_pair.png"))
 }
 
 # Add weighted pairwise cor (previously computed)
@@ -135,7 +135,7 @@ g0 <- ggplot(cor.all, aes(x = Correlation, color = Samples, linetype = Cor_metho
   theme_bw()
 plot(g0)
 ggsave(g0, width = 4, height = 3, 
-       filename = "../analysis/nuc_vs_cell/nuc_vs_cell_pw_cor.pdf")
+       filename = "../output/nuc_vs_cell_pw_cor.pdf")
 
 
 # Count # cells expressing each gene
@@ -177,7 +177,7 @@ for (split.v4 in c(FALSE, TRUE, FALSE)) {  #
   #      rownames(gene.cnt), cex = 1)
   
   gene.prop <- sweep(gene.cnt, 2, apply(gene.cnt, 2, max), "/")
-  # write.csv(gene.prop, file = "../analysis/nuc_vs_cell/gene.prop.csv")
+  # write.csv(gene.prop, file = "../output/gene.prop.csv")
   # keep.genes <- order(apply(gene.prop, 1, sd), decreasing = TRUE)[1:1000]
   keep.genes <- abs(gene.prop$Cells - gene.prop$Nuclei) > 0.4
   # pheatmap(gene.prop[keep.genes, ], fontsize_row = 2, fontsize_col = 36, 
@@ -204,7 +204,7 @@ for (split.v4 in c(FALSE, TRUE, FALSE)) {  #
 }
 
 # Save list of genes
-out.fn1 <- "../analysis/nuc_vs_cell/Cell_vs_nuc_gene_detection.csv"
+out.fn1 <- "../output/Cell_vs_nuc_gene_detection.csv"
 if (! file.exists(out.fn1)) {
   write.csv(gene.expr.prop, file = out.fn1, row.names = FALSE)
 }
@@ -226,7 +226,7 @@ dex.ie <- topTable(fit2, number = Inf, p.value = 1, adjust = "BH", sort.by = "no
 dex.ie$gene <- row.names(dex.ie)
 # dex.ie <- subset(dex.ie, AveExpr > 0)
 
-out.fn2 <- "../analysis/nuc_vs_cell/Cell_vs_nuc_dex_genes_introns_exons.csv"
+out.fn2 <- "../output/Cell_vs_nuc_dex_genes_introns_exons.csv"
 if (! file.exists(out.fn2)) {
   write.csv(dex.ie, file = out.fn2, row.names = FALSE)
 }
@@ -262,7 +262,7 @@ g5 <- ggplot(gene.prop.dex, aes(x = Nucleus_prop, y = Cell_prop)) +
         axis.title = element_text(size=12))
 plot(g5)
 ggsave(g5, width = 4.25, height = 3, 
-       filename = "../analysis/nuc_vs_cell/nuc_vs_cell_prop_scatter.pdf")
+       filename = "../output/nuc_vs_cell_prop_scatter.pdf")
 
 
 # DEX vs. sig
@@ -279,7 +279,7 @@ g2 <- ggplot(gene.prop.dex, aes(x = logFC, y = -log10(adj.P.Val))) +
         panel.grid.minor = element_blank())
 plot(g2)
 ggsave(g2, width = 4.25, height = 3, 
-       filename = "../analysis/nuc_vs_cell/nuc_vs_cell_dex_volcano.pdf")
+       filename = "../output/nuc_vs_cell_dex_volcano.pdf")
 
 
 # Prop vs. expr
@@ -376,10 +376,10 @@ for (gene.list in names(plot.genes)) {
 
 
 ggsave(expr.violins[["nuc_vs_wc"]], width = 3.25, height = 4,
-       filename = paste0("../analysis/nuc_vs_cell/nuc_vs_wc_violin.pdf"))
+       filename = paste0("../output/nuc_vs_wc_violin.pdf"))
 
 ggsave(expr.violins[["wc_vs_nuc"]], width = 3.25, height = 4,
-       filename = paste0("../analysis/nuc_vs_cell/wc_vs_nuc_violin.pdf"))
+       filename = paste0("../output/wc_vs_nuc_violin.pdf"))
 
 
 
@@ -410,7 +410,7 @@ g1 <- ggplot(gene.prop.dex2, aes(x = logFC, y = gene_len, color = AveExpr)) +
   theme_bw()
 plot(g1)
 ggsave(g1, width = 5, height = 3, dpi = 600,
-         filename = paste0("../analysis/nuc_vs_cell/gene_length_vs_nuc_enrichment.png"))
+         filename = paste0("../output/gene_length_vs_nuc_enrichment.png"))
 
 
 ```
@@ -437,7 +437,7 @@ dex.exons <- topTable(fit2, number = Inf, p.value = 1, adjust = "BH", sort.by = 
 dex.exons$gene <- row.names(dex.exons)
 
 
-out.fn3 <- "../analysis/nuc_vs_cell/Cell_vs_nuc_dex_genes_exons_only.csv"
+out.fn3 <- "../output/Cell_vs_nuc_dex_genes_exons_only.csv"
 if (! file.exists(out.fn3)) {
   write.csv(dex.exons, file = out.fn3, row.names = FALSE)
 }
@@ -473,7 +473,7 @@ subset(gene.prop.dex3, (logFC_ie < -log2(1.5) & adj.P.Val_ie < 0.05) &
 
 
 
-pdf(file = paste0("../analysis/nuc_vs_cell/gene_length_ecdf.pdf"),
+pdf(file = paste0("../output/gene_length_ecdf.pdf"),
     width = 8, height = 4)
 
 par(mfrow = c(1, 2))
@@ -1122,7 +1122,7 @@ c("GO:0006397","mRNA processing",0.561,6.1403,0.088,0.624,"RNA splicing"));
 # Treemap plots
 revigo.names <- c("term_ID","description","freqInDbPercent","abslog10pvalue","uniqueness","dispensability","representative");
 
-pdf( file="../analysis/nuc_vs_cell/nuc_vs_cell_go_enrich_revigo_treemaps.pdf", width=7, height=4) # width and height are in inches
+pdf( file="../output/nuc_vs_cell_go_enrich_revigo_treemaps.pdf", width=7, height=4) # width and height are in inches
 
 for (set1 in names(revigo.data.list)) {
   revigo.data <- revigo.data.list[[set1]]
@@ -1184,7 +1184,7 @@ g2 <- ggplot(gene.prop.dex2, aes(x = logFC_bin, y = gene_len)) +
 plot(g2)
 
 # ggsave(g2, width = 6, height = 3,
-#          filename = "../analysis/nuc_vs_cell/gene_length_vs_nuc_enrichment_boxplots.pdf")
+#          filename = "../output/gene_length_vs_nuc_enrichment_boxplots.pdf")
 
 
 gene.prop.dex2l <- melt(gene.prop.dex2[gene.prop.dex2$transcript_len < 1e5, 
