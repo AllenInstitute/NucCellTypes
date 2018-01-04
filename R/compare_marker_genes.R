@@ -28,6 +28,8 @@ scores.subset <- subset(scores, total.clusters_nuc > 0 & total.clusters_nuc < 11
                           total.clusters_cell > 0 & total.clusters_cell < 11)
 summary(lm(beta.prop1_cell ~ 0 + beta.prop1_nuc, data = scores.subset))
 
+
+#### Figure 4F ####
 g1 <- ggplot(scores.subset, aes(x = beta.prop1_nuc, y = beta.prop1_cell)) + 
   # color = log2(fpkm.max_cell + 1))) +
   # facet_wrap(~ total.clusters_cell) +
@@ -58,7 +60,6 @@ paste(genes, collapse = ",")
 
 
 table(scores.subset$total.clusters_nuc, scores.subset$total.clusters_cell)
-
 
 
 
