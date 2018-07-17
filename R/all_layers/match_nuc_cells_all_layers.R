@@ -3,7 +3,7 @@ library(WGCNA)
 
 input.path.cell <- "//allen/programs/celltypes/workgroups/rnaseqanalysis/STARforLIMS/Mouse/Final_Output/Mouse_Final_21913"
 input.path.nuc <- "//allen/programs/celltypes/workgroups/rnaseqanalysis/STARforLIMS/Mouse/Final_Output/Nuclei_Noisemodel/R_objects/"
-out.path <- "//allen/programs/celltypes/workgroups/hct/CT_clustering/mouse_cell_vs_nuc/cache"
+out.path <- "//allen/programs/celltypes/workgroups/hct/CT_clustering/mouse_cell_vs_nuc/cache/20180205_VISp_nuc"
 
 #### Load V1 L5 whole cell data ####
 for (file1 in c("samp.dat", "intron", "exon", "zero.wt")) { 
@@ -27,10 +27,11 @@ for (file1 in c("samp.dat", "intron", "exon", "zero.wt")) {
 }
 
 # Cluster anno
-anno.nuc <- as.data.frame(read_feather("//allen/programs/celltypes/workgroups/hct/CT_clustering/mouse_cell_vs_nuc/shinydb/20171211_VISp_nuc_1/anno.feather"))
+cl.df <- read.csv(file = "//allen/programs/celltypes/workgroups/hct/CT_clustering/mouse_cell_vs_nuc/cache/20180205_VISp_nuc/1/9999/merged/clid_merged.csv", stringsAsFactors = FALSE)
+nuc.id <- sapply(cl.df$sampid, function(x) strsplit(x, "~")[[1]][1])
 
 # QC criteria
-keep.nuc <- which(row.names(samp.dat) %in% anno.nuc$sample_id)
+keep.nuc <- which(row.names(samp.dat) %in% nuc.id)
 samp.nuc <- droplevels(samp.dat[keep.nuc, ])
 cd.nuc <- intron[, keep.nuc] + exon[, keep.nuc]
 cpm.nuc <- round(sweep(cd.nuc, 2, colSums(cd.nuc), "/") * 1e6, 0)
