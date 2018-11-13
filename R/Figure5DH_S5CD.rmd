@@ -102,7 +102,8 @@ xy.rot <- RotateCoords(xy, rot.angle = alpha)
 
 nuc.ratio.df <- cbind(nuc.ratio.df, xy.rot)
 nuc.ratio.df$depth_from_pia <- max(nuc.ratio.df$`2`) - nuc.ratio.df$`2` + 30
-
+nuc.ratio.df$depth_from_pia_bin <- cut(nuc.ratio.df$depth_from_pia, 
+                                       breaks = seq(0, 900, by = 100))
 
 # Layer annotation
 layer.prop <- c(0, 0.12, 0.36, 0.08, 0.23, 0.21)  # Nissl annotated
@@ -119,20 +120,45 @@ for (i in 2:length(layer.depth)) {
   layer.midpt <- c(layer.midpt, layer.depth[i] - layer.width / 2)
 }
 
+
 g.prop.v.depth <- ggplot(nuc.ratio.df, aes(y = -depth_from_pia, x = nuc.vol.ratio,
                                size = soma.area^(3/2), color = soma.area^(3/2))) +
-  geom_point(show.legend = FALSE) +
+  geom_point() +
   geom_segment(data = layer.depth.df, aes(x = x1, xend = x2, y = y1, yend = y2),
                color = "black", size = 1, alpha = 0.5) +
   scale_x_continuous(limits = c(0.2, 1)) +
-  xlab("Nuclear proportion") +
+  scale_size_area() +
+  xlab("Nuclear volume proportion") +
   ylab(expression(paste("Depth from pia (", mu*m, ")"))) +
   scale_color_gradient(low = "grey80", high = "black") +
+  guides(size = guide_legend(title = expression(paste("Soma volume (", mu*m^3, ")")))) +
   theme_bw(base_size = 18) +
-  theme(panel.grid.minor = element_blank())
+  theme(panel.grid = element_blank())
 plot(g.prop.v.depth)
 ggsave(g.prop.v.depth, file = "../output/nuc_prop_vs_depth.pdf", 
-       height = 4, width = 4)
+       height = 4, width = 7)
+
+
+g.prop.hist <- ggplot(nuc.ratio.df, aes(x = nuc.vol.ratio)) +
+  # geom_density(adjust = 1) +
+  geom_histogram(binwidth = 0.025) +
+  xlim(limits = c(0.2, 1)) +
+  xlab("Nuclear volume proportion") +
+  ylab("Frequency") +
+  theme_bw(base_size = 18) +
+  theme(panel.grid = element_blank())
+plot(g.prop.hist)
+ggsave(g.prop.hist, file = "../output/nuc_prop_hist.pdf", 
+       height = 4, width = 6)
+
+
+g.prop.hist2 <- ggplot(nuc.ratio.df, aes(x = depth_from_pia_bin, y = nuc.vol.ratio)) +
+  geom_boxplot() +
+  xlab(expression(paste("Depth from pia (", mu*m, ")"))) +
+  ylab("Nuclear volume proportion") +
+  theme_bw(base_size = 18) +
+  theme(panel.grid = element_blank())
+plot(g.prop.hist2)
 
 ```
 
