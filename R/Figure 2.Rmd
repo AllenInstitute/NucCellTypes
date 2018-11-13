@@ -294,7 +294,7 @@ g4 <- ggplot(gene.prop.dex, aes(Cell_expr, Cell_Nuc_diff)) +
   ylim(c(-1, 1)) +
   theme_bw() + 
   theme(axis.title = element_text(size=12))
-# plot(g4)
+plot(g4)
 
 
 # DEX vs. Prop
@@ -308,7 +308,7 @@ g3 <- ggplot(gene.prop.dex, aes(x = logFC, y = Cell_Nuc_diff)) +
   xlab("Cell vs. Nucleus expression (log2 fold change)") +
   ylab("Difference in proportion of cells expressing gene\n(Cell - Nucleus)") + 
   theme_bw()
-# plot(g3)
+plot(g3)
 
 # DEX vs. expr
 g1 <- ggplot(gene.prop.dex, aes(x = Cell_expr, y = logFC)) +
@@ -318,7 +318,26 @@ g1 <- ggplot(gene.prop.dex, aes(x = Cell_expr, y = logFC)) +
   xlab("Cell mean expression (cells with RPKM > 0)") +
   ylab("Cell vs. Nucleus expression (log2 fold change)") +
   theme_bw()
-# plot(g1)
+plot(g1)
+
+# Prop vs. expr
+g6 <- ggplot(gene.prop.dex, aes(Cell_expr, Cell_prop)) +
+  geom_hline(yintercept = 0) +
+  stat_bin_hex(bins = 50) +
+  scale_fill_gradientn(colours=pal.spectral, trans="log10", name="# Genes") +
+  geom_smooth(data = prop.exp, aes(Cell_expr, exprq), 
+              color = "grey", size = 2, se = FALSE) +
+  geom_smooth(data = prop.exp, aes(Cell_expr, -exprq), 
+              color = "grey", size = 2, se = FALSE) +
+  # geom_text(data = gene.annot, aes(x = logFC, y = Cell_Nuc_diff, label = gene),
+  #           fontface = 3, size = 3) +
+  xlab("Cell mean expression (cells with RPKM > 0)") + 
+  ylab("Cell detection") + 
+  # ylim(c(-1, 1)) +
+  theme_bw() + 
+  theme(axis.title = element_text(size=12))
+plot(g6)
+
 
 ```
 
@@ -410,6 +429,34 @@ ggsave(g1, width = 5, height = 3, dpi = 600,
 
 
 ```
+
+```{r dropout-rate}
+gene.prop.l <- rbind(data.frame(Sample = "Cell", 
+                                Expression = gene.prop.dex$AveExpr, 
+                                Dropout = 1 - gene.prop.dex$Cell_prop),
+                        data.frame(Sample = "Nucleus", 
+                                Expression = gene.prop.dex$AveExpr, 
+                                Dropout = 1 - gene.prop.dex$Nucleus_prop))
+gene.prop.l <- gene.prop.l[order(gene.prop.l$Expression), ]
+
+g.dropout <- ggplot(gene.prop.l, aes(x = Expression, y = Dropout, color = Sample)) +
+  # geom_vline(xintercept = 0, size = 1, color = "grey") +
+  geom_point(alpha = 0.02) +
+  geom_smooth(size = 2, se = FALSE) +
+  xlab("Mean expression (log2 CPM + 1)") +
+  ylab("Gene dropout (proportion of cells/nuclei with zero expression)") +
+  # scale_color_gradientn(colors = grey.colors(10, 0.9, 0, gamma = 1)) +
+  scale_color_manual(values = brewer.pal(3, "Set1")[2:1]) +
+  xlim(0, 12) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank())
+plot(g.dropout)
+ggsave(g.dropout, width = 6, height = 4, dpi = 600,
+       filename = "../output/nuc_vs_cell_gene_dropout.png")
+
+
+```
+
 
 
 ```{r exon-only-dex-genes}
