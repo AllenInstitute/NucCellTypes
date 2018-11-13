@@ -20,6 +20,7 @@ library(monocle)
 library(ggplot2)
 library(dplyr)
 library(matrixStats)
+library(subSeq)
 
 # Read in the data and extra scripts
 source(paste(scriptsFolder,"extraFunctions.r",sep=""))
@@ -166,4 +167,55 @@ verboseScatterplot(ne,ce,xlab="Mean log2_CPM(counts in nuclei)",ylab="Mean log2_
 dev.off()
 
 
+#########################################################################################
+## TBD ----------------------------------------------------------------------------
+## TBD ----------------------------------------------------------------------------
+
+print("Subsample introns and exons and count the number of genes detected (with counts/CPM>0) at various cutoffs in all cases.")
+
+# Define some variables
+sampleType  <- sampAll$Type
+counts      <- countsR+introns # TOTAL COUNTS
+subCountsN  <- list(All=counts[,sampleType=="Nuclei"])
+subCountsC  <- list(All=counts[,sampleType=="Cells"])
+medC        <- median(colSums(counts[,sampleType=="Cells"]))
+medN        <- median(colSums(counts[,sampleType=="Nuclei"]))
+nucScale    <- medC / medN
+propNamesC  <- round(medC/10000)/100 
+propNamesN  <- round(medN/10000)/100
+
+# Subsample to multiple count levels
+proportions <- (11:1)/10
+for (i in 2:length(proportions)){
+  subCountsN[[i]] <- generateSubsampledMatrix(subCountsN[[1]], proportions[i]*nucScale, seed=i)
+  subCountsC[[i]] <- generateSubsampledMatrix(subCountsC[[1]], proportions[i], seed=i)
+  propNamesC      <- c(propNamesC,round(medC*proportions[i]/10000)/100)
+  propNamesN      <- c(propNamesN,round(medC*proportions[i]/10000)/100)
+}
+
+# Calculate genes detected at various cutoffs for cells and nuclei
+Ns     <- 0
+outNuc <- outCell <- NULL
+for (i in 1:length(proportions)){
+  outNuc  <- rbind(outNuc,cbind(colSums(subCountsN[[i]]>Ns)/1000,propNamesN[i],"Nuclei"))
+  outCell <- rbind(outCell,cbind(colSums(subCountsC[[i]]>Ns)/1000,propNamesN[i],"Cells"))
+}
+colnames(outNuc) <- colnames(outCell) <- c("GenesDetected","TotalReads","Source")
+out <- rbind(outNuc,outCell)
+out <- as.data.frame(out)
+out$GenesDetected <- as.numeric(out$GenesDetected)
+out$TotalReads[out$TotalReads=="2.18"] = "All"
+out$TotalReads <- as.factor(as.character(out$TotalReads))
+out$Source <- as.factor(out$Source)
+rownames(out) <- NULL
+
+# Plot and output the results
+pdf(paste0(outputFolder,"genesDetected_subsample.pdf"),height=10,width=8)
+outPlot <- ggplot(out, aes(x = TotalReads, y = GenesDetected, fill = Source)) + 
+           geom_violin(draw_quantiles=c(0.25,0.5,0.75)) +
+		   labs(x="Median number of reads per cell (millions)", y="Genes Detected with CPM>0 (thousands)") +
+		   scale_fill_manual(values = c("#387EB8","#E21F26")) +
+           scale_y_continuous(breaks=(0:7)*2,limits=c(0,14)) 
+outPlot
+dev.off()
 
